@@ -1,0 +1,12 @@
+provision-ap installation default
+provision-ap no external-antenna
+provision-ap pap-user "{{ pap_user }}"
+provision-ap pap-passwd "{{ pap_pass }}"
+provision-ap ikepsk "{{ ikepsk }}"
+provision-ap server-ip {{ controller }}
+provision-ap master {{ controller }}
+provision-ap ap-group "{{ group }}"
+provision-ap ap-name "ap-{{ group }}-{{ index }}"
+provision-ap syslocation "{{ invNum }}"
+provision-ap remote-ap
+provision-ap reprovision ap-name "{{ mac }}"
