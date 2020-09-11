@@ -6,10 +6,10 @@ import re
 import logging
 from jinja2 import Environment, FileSystemLoader
 from time import sleep
-
+import os
 
 logging.basicConfig(filename="aruba-setupper.log", level=logging.INFO,
-                    format="%(acstime)s:%(message)s", datefmt="%H:%M:%S")
+                    format="%(asctime)s - %(message)s", datefmt="%H:%M:%S")
 
 
 def read_params():
@@ -36,9 +36,12 @@ def read_aruba_data():
     """
     aps = []
     with open("arubs.csv") as f:
+        # logging.info(f.read())
         reader = csv.reader(f, delimiter=';')
+        logging.info(reader)
         for invNum, serNum in reader:
             ap = {
+                "name": "",
                 "invNum": invNum.strip(),
                 "serNum": serNum.strip(),
                 "mac": "",
@@ -57,6 +60,7 @@ def parse_line(line):
     name, group, apType, ipAddr, status, flags, switchAddr, \
         standbyAddr, mac, serNum, *other = re.split(r' {2,}', line)
     ap = {
+        "name": "",
         "invNum": "",
         "serNum": serNum,
         "mac": mac,
@@ -88,17 +92,20 @@ def provision(ap, params):
     return template.render(**params, **ap).split("\n")
 
 
-def report_ap(ap, params):
-    print(f"----\n{ap['invNum']};{ap['serNum']};{ap['mac']};ap-{params['group']}-{ap['index']} is provisioned\n"
+def report_ap(ap):
+    print(f"----\n{ap['invNum']};{ap['serNum']};{ap['mac']};{ap['name']} is provisioned\n"
           f"Plug it off!\n----")
     with open("done.txt", 'a') as f:
-        f.write(f"{ap['invNum']};{ap['serNum']};{ap['mac']};ap-{params['group']}-{ap['index']}")
+        f.write(f"{ap['invNum']};{ap['serNum']};{ap['mac']};{ap['name']}\n")
 
 
 def aruba_setupper():
     """
-    Step 1. Read the configs
+    Step 1. Read the configs and init files
     """
+    if os.path.exists("done.txt"):
+        os.remove("done.txt")
+    logging.info("---- Aruba-setupper has beed initiated! ----")
     params = read_params()
     aps = read_aruba_data()
     aps_are_provisioned = False
@@ -176,23 +183,26 @@ def aruba_setupper():
                 # Found an existing AP
                 # If the new discovered AP is inactive and set up a secure tunnel, it is ready to be provisioned
                 if aps[found]["status"] != "Ready to provision":
+                    logging.info(f"AP is not ready to provision")
                     if aps[found]["flags"] == "2I":
+                        logging.info(f"AP flags are 2I")
                         # We remember it, and notify user
                         ready_to_provision.append(found)
                         aps_to_check.append(found)
                         logging.info(aps_to_check)
                         aps[found]["status"] = "Ready to provision"
-                        logging.info(f"AP {aps[found]['invNum']};{aps[found]['serNum']};{aps[found]['mac']} is "
-                                     f"ready to be provisioned")
+                        print(f"AP {aps[found]['invNum']};{aps[found]['serNum']};{aps[found]['mac']} is "
+                              f"ready to be provisioned")
                     # It is not ready, keep monitoring its status
                     else:
                         aps[found]["status"] = ap["status"]
+                        aps[found]["flags"] = ap["flags"]
             i += 1
 
         # For those APs that are ready to accept commands, we provision them
         for i in ready_to_provision:
             # Different padding based on the number of access points
-            if aps_count > 99:
+            if aps_count + start_index > 99:
                 aps[i]["index"] = f"{index:03}"
             else:
                 aps[i]["index"] = f"{index:02}"
@@ -230,9 +240,10 @@ def aruba_setupper():
             # If it is - it was successfully provisioned, otherwise, it wasn't plugged off
             if found != -1 and aps[found]["status"] != "Done":
                 aps[found]["status"] = "Done"
+                aps[found]["name"] = ap["name"]
                 aps_to_check.remove(found)
                 logging.info(aps_to_check)
-                report_ap(aps[found], params)
+                report_ap(aps[found])
             i += 1
 
         # When we have checked all the APs and the next free index is equal to the number of AP, then we're done
@@ -246,4 +257,3 @@ def aruba_setupper():
 
 if __name__ == "__main__":
     aruba_setupper()
-
