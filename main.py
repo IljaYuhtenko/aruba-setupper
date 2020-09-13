@@ -6,6 +6,7 @@ import re
 import logging
 from jinja2 import Environment, FileSystemLoader
 from time import sleep
+from time import strftime
 import os
 
 logging.basicConfig(filename="aruba-setupper.log", level=logging.INFO,
@@ -38,7 +39,7 @@ def read_aruba_data():
     with open("arubs.csv") as f:
         # logging.info(f.read())
         reader = csv.reader(f, delimiter=';')
-        logging.info(reader)
+        # logging.info(reader)
         for invNum, serNum in reader:
             ap = {
                 "name": "",
@@ -93,6 +94,9 @@ def provision(ap, params):
 
 
 def report_ap(ap):
+    """
+    This function logs the AP that was provisioned and checked to file and tells about it to user
+    """
     print(f"----\n{ap['invNum']};{ap['serNum']};{ap['mac']};{ap['name']} is provisioned\n"
           f"Plug it off!\n----")
     with open("done.txt", 'a') as f:
@@ -103,9 +107,11 @@ def aruba_setupper():
     """
     Step 1. Read the configs and init files
     """
+    logging.info("---- Aruba-setupper has beed initiated! ----")
     if os.path.exists("done.txt"):
         os.remove("done.txt")
-    logging.info("---- Aruba-setupper has beed initiated! ----")
+    with open("done.txt", 'w') as f:
+        pass
     params = read_params()
     aps = read_aruba_data()
     aps_are_provisioned = False
@@ -167,7 +173,7 @@ def aruba_setupper():
                 i += 1
                 continue
             # We found some non-garbage line
-            logging.info(f"{i}:{lines[i]}")
+            logging.info(f"{i}: {lines[i]}")
             ap = parse_line(lines[i])
             found = find_aruba(aps, ap)
             logging.info(f"That is #{found}")
@@ -179,11 +185,13 @@ def aruba_setupper():
                     aps[found]["mac"] = ap["mac"]
                     aps[found]["status"] = ap["status"]
                     aps[found]["flags"] = ap["flags"]
-                    print(f"Found AP {aps[found]['invNum']};{aps[found]['serNum']};{aps[found]['mac']}!")
+                    msg = f"Found AP {aps[found]['invNum']};{aps[found]['serNum']};{aps[found]['mac']}!"
+                    print(msg)
+                    logging.info(msg)
                 # Found an existing AP
                 # If the new discovered AP is inactive and set up a secure tunnel, it is ready to be provisioned
                 if aps[found]["status"] != "Ready to provision":
-                    logging.info(f"AP is not ready to provision")
+                    logging.info(f"AP was not counted as ready to be provisioned")
                     if aps[found]["flags"] == "2I":
                         logging.info(f"AP flags are 2I")
                         # We remember it, and notify user
@@ -191,9 +199,11 @@ def aruba_setupper():
                         aps_to_check.append(found)
                         logging.info(aps_to_check)
                         aps[found]["status"] = "Ready to provision"
-                        print(f"AP {aps[found]['invNum']};{aps[found]['serNum']};{aps[found]['mac']} is "
-                              f"ready to be provisioned")
-                    # It is not ready, keep monitoring its status
+                        msg = f"AP {aps[found]['invNum']};{aps[found]['serNum']};{aps[found]['mac']} is " \
+                              f"ready to be provisioned"
+                        print(msg)
+                        logging.info(msg)
+                    # It is not ready, keep monitoring its status and flags
                     else:
                         aps[found]["status"] = ap["status"]
                         aps[found]["flags"] = ap["flags"]
@@ -248,10 +258,14 @@ def aruba_setupper():
 
         # When we have checked all the APs and the next free index is equal to the number of AP, then we're done
         if len(aps_to_check) == 0 and index - start_index == aps_count:
-            print("Looks like we are done!")
+            msg = "Looks like we are done!"
+            print(msg)
+            logging.info(msg)
             aps_are_provisioned = True
         if not aps_are_provisioned:
-            print("Cycle is complete, going to sleep for a minute")
+            msg = f"{strftime('%H:%M:%S - Cycle is complete, going to sleep for a minute')}"
+            print(msg)
+            logging.info(msg)
             sleep(60)
 
 
