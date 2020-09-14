@@ -61,7 +61,7 @@ def parse_line(line):
     name, group, apType, ipAddr, status, flags, switchAddr, \
         standbyAddr, mac, serNum, *other = re.split(r' {2,}', line)
     ap = {
-        "name": "",
+        "name": name,
         "invNum": "",
         "serNum": serNum,
         "mac": mac,
@@ -115,7 +115,7 @@ def aruba_setupper():
     params = read_params()
     aps = read_aruba_data()
     aps_are_provisioned = False
-    start_index = index = params["start_index"] if params.get("start_index") else 0
+    start_index = index = params["start_index"] if params.get("start_index") else 1
     aps_count = len(aps)
     aps_to_check = []
 
