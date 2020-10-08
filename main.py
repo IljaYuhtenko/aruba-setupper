@@ -101,6 +101,8 @@ def report_ap(ap):
           f"Plug it off!\n----")
     with open("done.txt", 'a') as f:
         f.write(f"{ap['invNum']};{ap['serNum']};{ap['mac']};{ap['name']}\n")
+    with open("to_wiki.txt", 'a') as f:
+        f.write(f" {ap['name']} {ap['mac']} \n")
 
 
 def aruba_setupper():
@@ -110,7 +112,12 @@ def aruba_setupper():
     logging.info("---- Aruba-setupper has beed initiated! ----")
     if os.path.exists("done.txt"):
         os.remove("done.txt")
+    if os.path.exists("to_wiki.txt"):
+        os.remove("to_wiki.txt")
     with open("done.txt", 'w') as f:
+        pass
+    with open("to_wiki.txt", 'w') as f:
+        f.write(f" ap mac switch port\n")
         pass
     params = read_params()
     aps = read_aruba_data()
