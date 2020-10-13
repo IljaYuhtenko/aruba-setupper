@@ -44,7 +44,7 @@ def read_aruba_data():
             ap = {
                 "name": "",
                 "invNum": invNum.strip(),
-                "serNum": serNum.strip(),
+                "serNum": serNum.strip().upper(),
                 "mac": "",
                 "index": "",
                 "status": "absent",
